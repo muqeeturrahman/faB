@@ -1,0 +1,28 @@
+# Node modules and logs
+node_modules
+npm-debug.log
+yarn-error.log
+
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploaded files
+uploads/
+
+# Temporary files
+*.swp
+*.swo
+*.bak
+
+# Docker-specific
+.dockerignore
+Dockerfile
+
+# Other
+logs/
