@@ -86,7 +86,7 @@ exports.createService = async (req, res, next) => {
       for (let index = 0; index < req.files.media.length; index++) {
         const element = req.files.media[index];
         let newMedia = await createMedia({
-          file: element.filename,
+          file: element.key,
           fileType: "Image", // Assuming award images are always images
           userId: userId,
         });
@@ -184,7 +184,7 @@ exports.updateService = async (req, res, next) => {
         const element = req.files.media[index];
 
         let newMedia = await createMedia({
-          file: element.filename,
+          file: element.key,
           fileType: "Image", // Assuming award images are always images
           userId: req.user.id,
         });

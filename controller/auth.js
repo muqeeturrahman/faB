@@ -285,7 +285,7 @@ exports.createProfile = async (req, res, next) => {
           const profilePicture = req.files.profileImage[0];
           let newMedia;
           newMedia = await createMedia({
-            file: profilePicture.filename,
+            file: profilePicture.key,
             fileType: "Image", // Assuming award images are always images
             userId: userId,
           });
@@ -365,7 +365,7 @@ exports.createProfile = async (req, res, next) => {
           const profilePicture = req.files.profileImage[0];
           let newMedia;
           newMedia = await createMedia({
-            file: profilePicture.filename,
+            file: profilePicture.key,
             fileType: "Image", // Assuming award images are always images
             userId: userId,
           });
@@ -383,7 +383,7 @@ exports.createProfile = async (req, res, next) => {
           ) {
             const element = req.files.portfolioImage[index];
             let newMedia = await createMedia({
-              file: element.filename,
+              file: element.key,
               fileType: "Image", // Assuming award images are always images
               userId: userId,
             });
@@ -622,7 +622,7 @@ exports.updateProfile = async (req, res, next) => {
           const profilePicture = req.files.profileImage[0];
           let newMedia;
           newMedia = await createMedia({
-            file: profilePicture.filename,
+            file: profilePicture.key,
             fileType: "Image",
             userId: userId,
           });
@@ -665,7 +665,7 @@ exports.updateProfile = async (req, res, next) => {
           const profilePicture = req.files.profileImage[0];
           let newMedia;
           newMedia = await createMedia({
-            file: profilePicture.filename,
+            file: profilePicture.key,
             fileType: "Image",
             userId: userId,
           });
@@ -688,7 +688,7 @@ exports.updateProfile = async (req, res, next) => {
           ) {
             const element = req.files.portfolioImage[index];
             let newMedia = await createMedia({
-              file: element.filename,
+              file: element.key,
               fileType: "Image",
               userId: userId,
             });

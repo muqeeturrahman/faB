@@ -14,7 +14,7 @@ exports.createHelpTicket = async (req, res, next) => {
       for (const image of req.files.image) {
         let newMedia;
         newMedia = await createMedia({
-          file: image.filename,
+          file: image.key,
           fileType: "Image",
           userId: user,
         });
