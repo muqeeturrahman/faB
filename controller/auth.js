@@ -40,6 +40,7 @@ const path = require("path");
 
 exports.register = async (req, res, next) => {
   try {
+    console.log("api is hitting>>>>>>>")
     const body = parseBody(req.body);
     const { error } = registerUserValidation.validate(body);
     if (error) {
