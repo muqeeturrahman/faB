@@ -283,68 +283,58 @@ exports.getChatList = async (req, res, next) => {
 
 exports.getMessages = async (req, res, next) => {
   try {
-    const { user, sessionId } = req.query;
+    const { channelId, sessionId } = req.query;
     const loginUser = req.user.id;
 
+    // Build query for messages in the given channel, not deleted/flagged by user
     let query = {
-      sessionId: sessionId,
-      isRead: false,
-      deletedBy: { $nin: loginUser },
-      flaggedBy: { $nin: loginUser },
+      channel: channelId,
+      deletedBy: { $nin: [loginUser] },
+      flaggedBy: { $nin: [loginUser] },
     };
 
-    const messageForSeen = await getMessages(query);
+    // Mark unread messages as read and emit seen event
+    const unreadQuery = {
+      ...query,
+      isRead: false,
+    };
+    const messageForSeen = await getMessages(unreadQuery);
 
     if (messageForSeen.length > 0) {
-      messageForSeen.map(async (e) => {
+      for (const e of messageForSeen) {
         const message = await updateMessageById(e._id, {
           $set: { isRead: true },
         });
         seenMessageIO(message);
-      });
+      }
     }
-    let Channel = await findChat({
-      sessionId: sessionId,
-    });
+
+    // Reset chat list for all users in the channel
+    let Channel = await findChat({ channel: channelId });
     if (Channel?.users && Channel.users.length > 0) {
-      Channel.users.map(async (e) => {
-        let resetChats = await ResetChatList(e._id);
-        resetChatIO(e._id, resetChats);
-      });
+      for (const e of Channel.users) {
+        let resetChats = await ResetChatList(e._id || e);
+        resetChatIO(e._id || e, resetChats);
+      }
     }
-    // delete query.sender;
-    delete query.isRead;
 
-    const page = req.query.page || 1;
-    // const limit = req.query.limit || 10
-    // let messagesData = await findMessages({
-    //     query, page, limit, populate: [
-    //         {
-    //             path: 'sender'
-    //         }
-    //     ]
-    // })
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const limit = req.query.limit || 10;
- 
-    query = getMessageAggregationwithDetail(null, sessionId, loginUser);  
-
-    // messagesData = {
-    //     ...messagesData
-    // }
+    // Find messages with pagination
     const messagesData = await findMessages({
       query,
       page,
       limit,
       populate: [
-        {
-          path: "sender",
-          //   populate: {
-          //     path: 'ssn_image profileImage',
-          //   },
-        },
+      {
+        path: "sender",
+    
+      },
       ],
     });
+
     generateResponse(messagesData, "Messages fetched successfully", res);
   } catch (error) {
     console.log(error, "error>>>");
