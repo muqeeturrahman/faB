@@ -167,7 +167,7 @@ exports.sendMessage = async (req, res, next) => {
 
         const receiverCount = await unSeenMessageCountQuery(e);
 
-        sendMessageForSpecificSessionIO(e, session= sessionId, newMessage[0]);
+        sendMessageForSpecificSessionIO(e, session = sessionId, newMessage[0]);
 
         unSeenMessageCount(e, receiverCount);
 
@@ -324,20 +324,53 @@ exports.getMessages = async (req, res, next) => {
     // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
+    const totalItems = await getMessages({
+      sessionId: sessionId,
+      deletedBy: { $nin: [loginUser] },
+      flaggedBy: { $nin: [loginUser] },
+    }).countDocuments();
     // Find messages with pagination
-    const messagesData = await findMessages({
-      query,
-      page,
-      limit,
-      populate: [
-        {
-          path: "sender",
-        }
-      ],
+    const messagesData = await getMessages({
+      sessionId: sessionId,
+      deletedBy: { $nin: [loginUser] },
+      flaggedBy: { $nin: [loginUser] },
+    })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "sender",
+        populate: {
+          path: "profileId",
+        },
+      });
+    const result = messagesData.map(msg => {
+      const msgObj = msg.toObject();
+      return {
+        ...msgObj,
+        sender: msgObj.sender || null, // flatten sender to just ID
+      };
     });
 
-    generateResponse(messagesData, "Messages fetched successfully", res);
+    // Step 4: Construct pagination info
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const pagination = {
+      totalItems,
+      currentPage: page,
+      totalPages,
+      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages,
+      prevPage: page > 1 ? page - 1 : null,
+      nextPage: page < totalPages ? page + 1 : null,
+    };
+    const resu = {
+      result,
+      pagination,
+    }
+    generateResponse(resu, "Messages fetched successfully", res);
   } catch (error) {
     console.log(error, "error>>>");
     next(new Error(error.message));
@@ -540,13 +573,13 @@ exports.getPollDetails = async (req, res, next) => {
       });
     }
 
-    const query = getMessageAggregationwithDetail(messageId ,sessionId, user)
+    const query = getMessageAggregationwithDetail(messageId, sessionId, user)
     const messagesData = await findMessageByAggregate(query);
-    if(!messagesData){
-        return next({
-            statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
-            message: "Error fetching details.",
-          });
+    if (!messagesData) {
+      return next({
+        statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
+        message: "Error fetching details.",
+      });
     }
     generateResponse(messagesData[0], "Poll details fetched", res);
 
@@ -567,9 +600,9 @@ exports.updatePollStatus = async (req, res, next) => {
         message: "Poll not found",
       });
     }
-    const updatedPoll = await updatePollStatusByID(pollId, {pollingStatus: "Completed"})
+    const updatedPoll = await updatePollStatusByID(pollId, { pollingStatus: "Completed" })
 
-    const query = getMessageAggregationwithDetail(messageId ,sessionId, user)
+    const query = getMessageAggregationwithDetail(messageId, sessionId, user)
     const messagesData = await findMessageByAggregate(query);
     const getRecieverList = await findMessageById(messageId);
     if (!getRecieverList) {
@@ -581,7 +614,7 @@ exports.updatePollStatus = async (req, res, next) => {
     messagesData[0].poll.State = "Updated"
     getRecieverList.receiver.forEach((receiver) => {
       if (receiver) {
-        sendMessageForSpecificSessionIO(receiver, session = sessionId,messagesData[0]);
+        sendMessageForSpecificSessionIO(receiver, session = sessionId, messagesData[0]);
       }
     });
 
