@@ -24,52 +24,52 @@ const { findBookings, updateBooking } = require("../models/bookingModel")
 // };
 // const serviceStartTime = new Date(`1970-01-01T${convertTo24HourFormat(service.startingDate)}`)
 
-cron.schedule('5 0 * * *', async () => {
-    let date = new Date().toISOString()
-    let d = date.split("T")[0]
-    console.log(d, "d>>>");
-    await updateEvents({ date: { $lt: d } }, { completion_status: "completed" })
+// cron.schedule('5 0 * * *', async () => {
+//     let date = new Date().toISOString()
+//     let d = date.split("T")[0]
+//     console.log(d, "d>>>");
+//     await updateEvents({ date: { $lt: d } }, { completion_status: "completed" })
 
-});
-
-
+// });
 
 
-cron.schedule(' * * * * * ', async () => {
-    const service = await findServices({});
-
-    let startTime = new Date().toISOString().split("T")[1]
 
 
-    let serviceStartTime;
-    let serviceEndTime;
-    service.map(async (e) => {
-        if (e.startingDate && e.endingDate) {
-            serviceStartTime = e?.startingDate.split(" ")[1];
-            serviceEndTime = e?.endingDate.split(" ")[1];
-        }
-        if (startTime >= serviceStartTime && startTime <= serviceEndTime) {
+// cron.schedule(' * * * * * ', async () => {
+//     const service = await findServices({});
 
-            await updateService(e._id, { status: "opened" })
-        }else{
+//     let startTime = new Date().toISOString().split("T")[1]
+
+
+//     let serviceStartTime;
+//     let serviceEndTime;
+//     service.map(async (e) => {
+//         if (e.startingDate && e.endingDate) {
+//             serviceStartTime = e?.startingDate.split(" ")[1];
+//             serviceEndTime = e?.endingDate.split(" ")[1];
+//         }
+//         if (startTime >= serviceStartTime && startTime <= serviceEndTime) {
+
+//             await updateService(e._id, { status: "opened" })
+//         }else{
       
 
-            await updateService(e._id, { status: "closed" })
-        }
-    })
-    const bookings = await findBookings({})
-    let currentTime = new Date().toISOString()
-    bookings?.map(async (e) => {
-        let end1 = new Date(e.endTime).toISOString()
-        if (e.status != "cancelled") {
-            if (currentTime > end1) {
-                await updateBooking(e._id, { status: "completed" })
-            }
+//             await updateService(e._id, { status: "closed" })
+//         }
+//     })
+//     const bookings = await findBookings({})
+//     let currentTime = new Date().toISOString()
+//     bookings?.map(async (e) => {
+//         let end1 = new Date(e.endTime).toISOString()
+//         if (e.status != "cancelled") {
+//             if (currentTime > end1) {
+//                 await updateBooking(e._id, { status: "completed" })
+//             }
 
-        }
+//         }
 
-    })
+//     })
 
-});
+// });
 
 
