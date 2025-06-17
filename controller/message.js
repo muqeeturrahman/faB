@@ -283,6 +283,9 @@ exports.getChatList = async (req, res, next) => {
 
 exports.getMessages = async (req, res, next) => {
   try {
+    console.log("api is hitting>>..getMessages")
+    console.log("api is hitting>>..getMessages")
+
     const { channelId, sessionId } = req.query;
     const loginUser = req.user.id;
 
