@@ -288,7 +288,7 @@ exports.getMessages = async (req, res, next) => {
 
     // Build query for messages in the given channel, not deleted/flagged by user
     let query = {
-      channel: channelId,
+      sessionId: sessionId,
       deletedBy: { $nin: [loginUser] },
       flaggedBy: { $nin: [loginUser] },
     };
@@ -328,10 +328,9 @@ exports.getMessages = async (req, res, next) => {
       page,
       limit,
       populate: [
-      {
-        path: "sender",
-    
-      },
+        {
+          path: "sender",
+        }
       ],
     });
 
