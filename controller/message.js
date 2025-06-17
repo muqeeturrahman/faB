@@ -340,12 +340,25 @@ exports.getMessages = async (req, res, next) => {
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
-      .populate({
-        path: "sender",
+.populate([
+  {
+    path: "sender",
+    populate: {
+      path: "profileId",
+    },
+  },
+  {
+    path: "poll",
+    populate: [
+      {
+        path: "services",
         populate: {
-          path: "profileId",
+          path: "media", // ✅ populate media inside each service
         },
-      });
+      },
+    ],
+  },
+])
     const result = messagesData.map(msg => {
       const msgObj = msg.toObject();
       return {
