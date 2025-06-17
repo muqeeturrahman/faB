@@ -3,3 +3,4 @@
 *.zip
 *.php
 .env
+key.pem

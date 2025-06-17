@@ -317,7 +317,8 @@ exports.getUserEvents = async (req, res, next) => {
     // Populate profiles based on role
     const populatedEvents = await Promise.all(
       events.map(async (event) => {
-        if (event.user && event.user.role === "organization") {
+        console.log(event,"event>>>>>")
+        if ((event.user.role === "organization")) {
           profilePopulateOptions = {
             path: "profileId",
             model: "orgprofiles",
@@ -329,7 +330,7 @@ exports.getUserEvents = async (req, res, next) => {
           event.user = await findUser({ _id: event.user._id }).populate(
             profilePopulateOptions
           );
-        } else if (event.user) {
+        } else {
           profilePopulateOptions = {
             path: "profileId",
             model: "userprofiles",
@@ -341,7 +342,6 @@ exports.getUserEvents = async (req, res, next) => {
             profilePopulateOptions
           );
         }
-        // If event.user is null, just return event as is
         return event;
       })
     );
