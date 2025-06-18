@@ -281,114 +281,114 @@ exports.getChatList = async (req, res, next) => {
   }
 };
 
-exports.getMessages = async (req, res, next) => {
-  try {
-    console.log("api is hitting>>..getMessages")
-    console.log("api is hitting>>..getMessages")
+// exports.getMessages = async (req, res, next) => {
+//   try {
+//     console.log("api is hitting>>..getMessages")
+//     console.log("api is hitting>>..getMessages")
 
-    const { channelId, sessionId } = req.query;
-    const loginUser = req.user.id;
+//     const { channelId, sessionId } = req.query;
+//     const loginUser = req.user.id;
 
-    // Build query for messages in the given channel, not deleted/flagged by user
-    let query = {
-      sessionId: sessionId,
-      deletedBy: { $nin: [loginUser] },
-      flaggedBy: { $nin: [loginUser] },
-    };
+//     // Build query for messages in the given channel, not deleted/flagged by user
+//     let query = {
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     };
 
-    // Mark unread messages as read and emit seen event
-    const unreadQuery = {
-      ...query,
-      isRead: false,
-    };
-    const messageForSeen = await getMessages(unreadQuery);
+//     // Mark unread messages as read and emit seen event
+//     const unreadQuery = {
+//       ...query,
+//       isRead: false,
+//     };
+//     const messageForSeen = await getMessages(unreadQuery);
 
-    if (messageForSeen.length > 0) {
-      for (const e of messageForSeen) {
-        const message = await updateMessageById(e._id, {
-          $set: { isRead: true },
-        });
-        seenMessageIO(message);
-      }
-    }
+//     if (messageForSeen.length > 0) {
+//       for (const e of messageForSeen) {
+//         const message = await updateMessageById(e._id, {
+//           $set: { isRead: true },
+//         });
+//         seenMessageIO(message);
+//       }
+//     }
 
-    // Reset chat list for all users in the channel
-    let Channel = await findChat({ channel: channelId });
-    if (Channel?.users && Channel.users.length > 0) {
-      for (const e of Channel.users) {
-        let resetChats = await ResetChatList(e._id || e);
-        resetChatIO(e._id || e, resetChats);
-      }
-    }
+//     // Reset chat list for all users in the channel
+//     let Channel = await findChat({ channel: channelId });
+//     if (Channel?.users && Channel.users.length > 0) {
+//       for (const e of Channel.users) {
+//         let resetChats = await ResetChatList(e._id || e);
+//         resetChatIO(e._id || e, resetChats);
+//       }
+//     }
 
-    // Pagination
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+//     // Pagination
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
 
-    const totalItems = await getMessages({
-      sessionId: sessionId,
-      deletedBy: { $nin: [loginUser] },
-      flaggedBy: { $nin: [loginUser] },
-    }).countDocuments();
-    // Find messages with pagination
-    const messagesData = await getMessages({
-      sessionId: sessionId,
-      deletedBy: { $nin: [loginUser] },
-      flaggedBy: { $nin: [loginUser] },
-    })
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-.populate([
-  {
-    path: "sender",
-    populate: {
-      path: "profileId",
-    },
-  },
-  {
-    path: "poll",
-    populate: [
-      {
-        path: "services",
-        populate: {
-          path: "media", // ✅ populate media inside each service
-        },
-      },
-    ],
-  },
-])
-    const result = messagesData.map(msg => {
-      const msgObj = msg.toObject();
-      return {
-        ...msgObj,
-        sender: msgObj.sender || null, // flatten sender to just ID
-      };
-    });
+//     const totalItems = await getMessages({
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     }).countDocuments();
+//     // Find messages with pagination
+//     const messagesData = await getMessages({
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     })
+//       .skip(skip)
+//       .limit(limit)
+//       .sort({ createdAt: -1 })
+// .populate([
+//   {
+//     path: "sender",
+//     populate: {
+//       path: "profileId",
+//     },
+//   },
+//   {
+//     path: "poll",
+//     populate: [
+//       {
+//         path: "services",
+//         populate: {
+//           path: "media", // ✅ populate media inside each service
+//         },
+//       },
+//     ],
+//   },
+// ])
+//     const result = messagesData.map(msg => {
+//       const msgObj = msg.toObject();
+//       return {
+//         ...msgObj,
+//         sender: msgObj.sender || null, // flatten sender to just ID
+//       };
+//     });
 
-    // Step 4: Construct pagination info
-    const totalPages = Math.ceil(totalItems / limit);
+//     // Step 4: Construct pagination info
+//     const totalPages = Math.ceil(totalItems / limit);
 
-    const pagination = {
-      totalItems,
-      currentPage: page,
-      totalPages,
-      hasPrevPage: page > 1,
-      hasNextPage: page < totalPages,
-      prevPage: page > 1 ? page - 1 : null,
-      nextPage: page < totalPages ? page + 1 : null,
-    };
-    const resu = {
-      result,
-      pagination,
-    }
-    generateResponse(resu, "Messages fetched successfully", res);
-  } catch (error) {
-    console.log(error, "error>>>");
-    next(new Error(error.message));
-  }
-};
+//     const pagination = {
+//       totalItems,
+//       currentPage: page,
+//       totalPages,
+//       hasPrevPage: page > 1,
+//       hasNextPage: page < totalPages,
+//       prevPage: page > 1 ? page - 1 : null,
+//       nextPage: page < totalPages ? page + 1 : null,
+//     };
+//     const resu = {
+//       result,
+//       pagination,
+//     }
+//     generateResponse(resu, "Messages fetched successfully", res);
+//   } catch (error) {
+//     console.log(error, "error>>>");
+//     next(new Error(error.message));
+//   }
+// };
 
 // exports.votePoll = async (req, res, next) => {
 //   try {
@@ -448,7 +448,82 @@ exports.getMessages = async (req, res, next) => {
 //     next(new Error(error.message));
 //   }
 // };
+exports.getMessages = async (req, res, next) => {
+    try {
+        const { user, sessionId } = req.query
+        const loginUser = req.user.id
 
+
+        console.log("loginUser>>>>>", loginUser);
+
+        let query = {
+            sessionId: sessionId,
+            isRead: false,
+            deletedBy: { $nin: loginUser },
+            flaggedBy: { $nin: loginUser }
+
+        }
+        const messageForSeen = await getMessages(query)
+
+
+
+        if (messageForSeen.length > 0) {
+            messageForSeen.map(async (e) => {
+                const message = await updateMessageById(e._id, { $set: { isRead: true } })
+                seenMessageIO(message)
+            })
+
+
+        }
+        // let Channel = await findChat({
+        //     session: sessionId
+        // });
+        // if (Channel.users.length > 0) {
+        //     Channel.users.map(async (e) => {
+        //         let resetChats = await ResetChatList(e._id)
+        //         resetChatIO(e._id, resetChats)
+
+        //     })
+
+
+        // }
+        delete query.sender;
+        delete query.isRead;
+
+        const page = req.query.page || 1
+        // const limit = req.query.limit || 10
+        // let messagesData = await findMessages({
+        //     query, page, limit, populate: [
+        //         {
+        //             path: 'sender'
+        //         }
+        //     ]
+        // })
+  
+        const limit = req.query.limit || 10;
+   
+         query = getMessagesWithPolls(sessionId,loginUser )
+     
+        // messagesData = {
+        //     ...messagesData
+        // }
+        const messagesData = await findMessages({
+            query, page, limit, populate: [
+                {
+                    path: 'sender',
+                    //   populate: {
+                    //     path: 'ssn_image profileImage',
+                    //   },
+                },
+            ]
+        });
+        generateResponse(messagesData, "Messages fetched successfully", res);
+
+    }
+    catch (error) {
+        next(new Error(error.message));
+    }
+}
 exports.deleteMessage = async (req, res, next) => {
   try {
     const user = req.user.id;

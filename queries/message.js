@@ -126,11 +126,11 @@ exports.getChatListQuery = (userId) => {
   ];
 };
 
-exports.getMessagesWithPolls = (channelId, loginUser) => {
+exports.getMessagesWithPolls = (sessionId, loginUser) => {
   return [
     {
       $match: {
-        sessionId: new Types.ObjectId(channelId),
+        sessionId: new Types.ObjectId(sessionId),
         isDeletedForEveryone: false,
         deletedBy: { $nin: [loginUser] },
       },
