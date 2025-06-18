@@ -390,64 +390,64 @@ exports.getChatList = async (req, res, next) => {
 //   }
 // };
 
-// exports.votePoll = async (req, res, next) => {
-//   try {
-//     // votePoll, getVote, deleteVote
-//     const { poll, serviceId, sessionId, messageId } = req.body;
-//     const user = req.user.id;
-//     const page = 1;
-//     const limit = 10;
-//     const findPoll = await getSinglePoll({ _id: poll });
-//     if (!findPoll) {
-//       return next({
-//         statusCode: STATUS_CODE.NOT_FOUND,
-//         message: "Poll not found",
-//       });
-//     }
-//     const getRecieverList = await findMessageById(messageId);
-//     if (!getRecieverList) {
-//       return next({
-//         statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
-//         message: "No message found for the message Id",
-//       });
-//     }
-//     let findVote = await getVote({ poll, serviceId, user });
-//     if (findVote.length !== 0) {
-//       const AlreadyVote = await deleteVote({ poll, user });
-//       query = getMessageAggregationwithDetail(messageId , sessionId, user);
-//       const messagesData = await findMessageByAggregate(query);
-//       messagesData[0].poll.State = "Updated"
-//       getRecieverList.receiver.forEach((receiver) => {
-//         if (receiver) {
-//           messagesData[0]['voter_Id'] = req?.user?.id; 
-//           sendMessageIO(receiver, messagesData[0]);
-//         }
-//       });
-//       generateResponse(AlreadyVote, "vote deleted", res);
-//       return;
-//     }
+exports.votePoll = async (req, res, next) => {
+  try {
+    // votePoll, getVote, deleteVote
+    const { poll, serviceId, sessionId, messageId } = req.body;
+    const user = req.user.id;
+    const page = 1;
+    const limit = 10;
+    const findPoll = await getSinglePoll({ _id: poll });
+    if (!findPoll) {
+      return next({
+        statusCode: STATUS_CODE.NOT_FOUND,
+        message: "Poll not found",
+      });
+    }
+    const getRecieverList = await findMessageById(messageId);
+    if (!getRecieverList) {
+      return next({
+        statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
+        message: "No message found for the message Id",
+      });
+    }
+    let findVote = await getVote({ poll, serviceId, user });
+    if (findVote.length !== 0) {
+      const AlreadyVote = await deleteVote({ poll, user });
+      query = getMessageAggregationwithDetail(messageId , sessionId, user);
+      const messagesData = await findMessageByAggregate(query);
+      messagesData[0].poll.State = "Updated"
+      getRecieverList.receiver.forEach((receiver) => {
+        if (receiver) {
+          messagesData[0]['voter_Id'] = req?.user?.id; 
+          sendMessageIO(receiver, messagesData[0]);
+        }
+      });
+      generateResponse(AlreadyVote, "vote deleted", res);
+      return;
+    }
 
-//     await deleteVote({ poll, user });
-//     let addVote = await votePoll({
-//       poll: poll,
-//       serviceId: serviceId,
-//       user: user,
-//     });
+    await deleteVote({ poll, user });
+    let addVote = await votePoll({
+      poll: poll,
+      serviceId: serviceId,
+      user: user,
+    });
 
-//     query = getUpdatedMessagesWithPollsAndVotes(sessionId, messageId, user);
-//     const messagesData = await findMessageByAggregate(query);
-//     messagesData[0].poll.State= "Updated"
-//     getRecieverList.receiver.forEach((receiver) => {
-//       if (receiver) {
-//         messagesData[0]['voter_Id'] = req?.user?.id;
-//         sendMessageIO(receiver, messagesData[0]);
-//       }
-//     });
-//     generateResponse(addVote, "vote added", res);
-//   } catch (error) {
-//     next(new Error(error.message));
-//   }
-// };
+    query = getUpdatedMessagesWithPollsAndVotes(sessionId, messageId, user);
+    const messagesData = await findMessageByAggregate(query);
+    messagesData[0].poll.State= "Updated"
+    getRecieverList.receiver.forEach((receiver) => {
+      if (receiver) {
+        messagesData[0]['voter_Id'] = req?.user?.id;
+        sendMessageIO(receiver, messagesData[0]);
+      }
+    });
+    generateResponse(addVote, "vote added", res);
+  } catch (error) {
+    next(new Error(error.message));
+  }
+};
 exports.getMessages = async (req, res, next) => {
     try {
         const { user, sessionId } = req.query
