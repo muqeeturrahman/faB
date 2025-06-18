@@ -14,112 +14,122 @@ exports.io = (server) => {
     
     const userId = socket.handshake?.headers?.user_id;
     const sessionId = socket.handshake?.headers?.session_id;
+    console.log(`User connected: ${userId} in session: ${sessionId}`);
     const eventName = `vote-poll-${userId}-session-${sessionId}`;
 
-    socket.on(eventName, async (data, callback) => {
-      try {
-        const { poll, serviceId, sessionId, messageId } = data;
+   socket.on(eventName, async (data, callback) => {
+  try {
+    const { poll, serviceId, sessionId, messageId } = data;
 
-        // Validate the poll
-        const findPoll = await getSinglePoll({ _id: poll });
-        if (!findPoll) {
-          return (
-            typeof callback === "function" &&
-            callback({
-              statusCode: 404,
-              message: "Poll not found",
-            })
-          );
-        }
+    // Validate the poll
+    const findPoll = await getSinglePoll({ _id: poll });
+    if (!findPoll) {
+      return (
+        typeof callback === "function" &&
+        callback({
+          statusCode: 404,
+          message: "Poll not found",
+        })
+      );
+    }
 
-        // Fetch message and its receiver list
-        const getRecieverList = await findMessageById(messageId);
-        if (!getRecieverList) {
-          return (
-            typeof callback === "function" &&
-            callback({
-              statusCode: 500,
-              message: "No message found for the provided message ID",
-            })
-          );
-        }
+    // Fetch message and its receiver list
+    const getRecieverList = await findMessageById(messageId);
+    if (!getRecieverList) {
+      return (
+        typeof callback === "function" &&
+        callback({
+          statusCode: 500,
+          message: "No message found for the provided message ID",
+        })
+      );
+    }
 
-        let findVote = await getVote({ poll, serviceId, user: userId });
-        if (findVote.length !== 0) {
-          const AlreadyVote = await deleteVote({ poll, user: userId });
+    let findVote = await getVote({ poll, serviceId, user: userId });
+    if (findVote.length !== 0) {
+      const AlreadyVote = await deleteVote({ poll, user: userId });
 
-          const query = getMessageAggregationwithDetail(
-            messageId,
-            sessionId,
-            userId
-          );
-          const messagesData = await findMessageByAggregate(query);
+      const query = getMessageAggregationwithDetail(
+        messageId,
+        sessionId,
+        userId
+      );
+      const messagesData = await findMessageByAggregate(query);
 
-          messagesData[0].poll.State = "Updated";
-
-          getRecieverList.receiver.forEach((receiver) => {
-            if (receiver) {
-              messagesData[0]["voter_Id"] = userId;
-              this.sendMessageForSpecificSessionIO(
-                receiver,
-                (session = sessionId),
-                messagesData[0]
-              ); // Use sendMessageIO for emitting
-            }
-          });
-          this.sendMessageForSpecificSessionIO(
-            (receiver = userId),
-            (session = sessionId),
-            messagesData[0]
-          );
-          return (
-            typeof callback === "function" &&
-            callback({ message: "Vote deleted", data: AlreadyVote })
-          );
-        }
-
-        await deleteVote({ poll, user: userId });
-        const addVote = await votePoll({
-          poll: poll,
-          serviceId: serviceId,
-          user: userId,
-        });
-
-        const query = getUpdatedMessagesWithPollsAndVotes(
-          sessionId,
-          messageId,
-          userId
-        );
-        const messagesData = await findMessageByAggregate(query);
-
+      if (messagesData.length > 0) {
         messagesData[0].poll.State = "Updated";
+
         getRecieverList.receiver.forEach((receiver) => {
           if (receiver) {
             messagesData[0]["voter_Id"] = userId;
             this.sendMessageForSpecificSessionIO(
               receiver,
-              (session = sessionId),
+              sessionId,
               messagesData[0]
             );
           }
         });
+
         this.sendMessageForSpecificSessionIO(
-          (receiver = userId),
-          (session = sessionId),
+          userId,
+          sessionId,
           messagesData[0]
         );
-        return (
-          typeof callback === "function" &&
-          callback({ message: "Vote added", data: addVote })
-        );
-      } catch (error) {
-        console.error("Error handling votePoll event:", error.message);
-        return (
-          typeof callback === "function" &&
-          callback({ statusCode: 500, message: error.message })
-        );
       }
+
+      return (
+        typeof callback === "function" &&
+        callback({ message: "Vote deleted", data: AlreadyVote })
+      );
+    }
+
+    await deleteVote({ poll, user: userId });
+    const addVote = await votePoll({
+      poll: poll,
+      serviceId: serviceId,
+      user: userId,
     });
+
+    const query = getUpdatedMessagesWithPollsAndVotes(
+      sessionId,
+      messageId,
+      userId
+    );
+    const messagesData = await findMessageByAggregate(query);
+
+    if (messagesData.length > 0) {
+      messagesData[0].poll.State = "Updated";
+
+      getRecieverList.receiver.forEach((receiver) => {
+        if (receiver) {
+          messagesData[0]["voter_Id"] = userId;
+          this.sendMessageForSpecificSessionIO(
+            receiver,
+            sessionId,
+            messagesData[0]
+          );
+        }
+      });
+
+      this.sendMessageForSpecificSessionIO(
+        userId,
+        sessionId,
+        messagesData[0]
+      );
+    }
+
+    return (
+      typeof callback === "function" &&
+      callback({ message: "Vote added", data: addVote })
+    );
+  } catch (error) {
+    console.error("Error handling votePoll event:", error.message);
+    return (
+      typeof callback === "function" &&
+      callback({ statusCode: 500, message: error.message })
+    );
+  }
+});
 
 
     socket.on('disconnect', async () => {
