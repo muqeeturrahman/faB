@@ -11,12 +11,14 @@ exports.io = (server) => {
   io.on('connection', async (socket) => {
     const userObj = await updateUserById(socket.handshake?.headers?.user_id, { online: true });
     socket.broadcast.emit('user-connected', userObj);
-    
+
     const userId = socket.handshake?.headers?.user_id;
     const sessionId = socket.handshake?.headers?.session_id;
+    console.log(`User connected: ${userId} in session: ${sessionId}`);
     const eventName = `vote-poll-${userId}-session-${sessionId}`;
 
     socket.on(eventName, async (data, callback) => {
+      console.log(`Received vote-poll event for user: ${userId} in session: ${sessionId}`);
       try {
         const { poll, serviceId, sessionId, messageId } = data;
 
@@ -55,23 +57,27 @@ exports.io = (server) => {
           );
           const messagesData = await findMessageByAggregate(query);
 
-          messagesData[0].poll.State = "Updated";
+          if (messagesData.length > 0) {
+            messagesData[0].poll.State = "Updated";
 
-          getRecieverList.receiver.forEach((receiver) => {
-            if (receiver) {
-              messagesData[0]["voter_Id"] = userId;
-              this.sendMessageForSpecificSessionIO(
-                receiver,
-                (session = sessionId),
-                messagesData[0]
-              ); // Use sendMessageIO for emitting
-            }
-          });
-          this.sendMessageForSpecificSessionIO(
-            (receiver = userId),
-            (session = sessionId),
-            messagesData[0]
-          );
+            getRecieverList.receiver.forEach((receiver) => {
+              if (receiver) {
+                messagesData[0]["voter_Id"] = userId;
+                this.sendMessageForSpecificSessionIO(
+                  receiver,
+                  sessionId,
+                  messagesData[0]
+                );
+              }
+            });
+
+            this.sendMessageForSpecificSessionIO(
+              userId,
+              sessionId,
+              messagesData[0]
+            );
+          }
+
           return (
             typeof callback === "function" &&
             callback({ message: "Vote deleted", data: AlreadyVote })
@@ -92,22 +98,27 @@ exports.io = (server) => {
         );
         const messagesData = await findMessageByAggregate(query);
 
-        messagesData[0].poll.State = "Updated";
-        getRecieverList.receiver.forEach((receiver) => {
-          if (receiver) {
-            messagesData[0]["voter_Id"] = userId;
-            this.sendMessageForSpecificSessionIO(
-              receiver,
-              (session = sessionId),
-              messagesData[0]
-            );
-          }
-        });
-        this.sendMessageForSpecificSessionIO(
-          (receiver = userId),
-          (session = sessionId),
-          messagesData[0]
-        );
+        if (messagesData.length > 0) {
+          messagesData[0].poll.State = "Updated";
+
+          getRecieverList.receiver.forEach((receiver) => {
+            if (receiver) {
+              messagesData[0]["voter_Id"] = userId;
+              this.sendMessageForSpecificSessionIO(
+                receiver,
+                sessionId,
+                messagesData[0]
+              );
+            }
+          });
+
+          this.sendMessageForSpecificSessionIO(
+            userId,
+            sessionId,
+            messagesData[0]
+          );
+        }
+
         return (
           typeof callback === "function" &&
           callback({ message: "Vote added", data: addVote })
@@ -136,13 +147,13 @@ exports.notificationCount = ({ count, userId }) => {
 };
 
 exports.sendMessageIO = (receiver, message) => io.emit(`send-message-${receiver}`, message);
-exports.sendMessageForSpecificSessionIO = (receiver,session, message) => io.emit(`send-message-${receiver}-session-${session}`, message);
+exports.sendMessageForSpecificSessionIO = (receiver, session, message) => io.emit(`send-message-${receiver}-session-${session}`, message);
 exports.resetChatIO = (chatId, data) => io.emit(`reset-chat-${chatId}`, data);
 
 
 exports.unSeenMessageCount = (receiver, count) => io.emit(`unseen-messages-count-${receiver}`, count);
 
-exports.unSeenMessageCountChannel = (receiver, count,channel) => io.emit(`unseen-read-count-${receiver}`, {count,channel});
+exports.unSeenMessageCountChannel = (receiver, count, channel) => io.emit(`unseen-read-count-${receiver}`, { count, channel });
 
 exports.sendRequest = (receiverId, data) => io.emit(`receive-request-${receiverId}`, data)
 // exports.chatUnReadCount = (receiver, count) => io.emit(`unseen-chat-count-${receiver}`, count);
@@ -164,6 +175,6 @@ exports.deleteCommentForAllIO = (comment) => {
   io.emit(`delete-message-for-all-${comment}`, comment);
 };
 
-exports.sessionUpdates=(user,session,details)=>{
+exports.sessionUpdates = (user, session, details) => {
   io.emit(`session-updates-${user}-${session}`, details);
 }

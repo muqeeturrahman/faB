@@ -31,7 +31,7 @@ messageSchema.plugin(aggregatePaginate);
 
 
 const MessageModel = model("message", messageSchema);
-
+exports.MessageModelL =
 // create new message
 exports.createMessage = (obj) => MessageModel.create(obj);
 

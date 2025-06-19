@@ -167,7 +167,7 @@ exports.sendMessage = async (req, res, next) => {
 
         const receiverCount = await unSeenMessageCountQuery(e);
 
-        sendMessageForSpecificSessionIO(e, session= sessionId, newMessage[0]);
+        sendMessageForSpecificSessionIO(e, session = sessionId, newMessage[0]);
 
         unSeenMessageCount(e, receiverCount);
 
@@ -281,136 +281,249 @@ exports.getChatList = async (req, res, next) => {
   }
 };
 
-exports.getMessages = async (req, res, next) => {
-  try {
-    const { user, sessionId } = req.query;
-    const loginUser = req.user.id;
-
-    let query = {
-      sessionId: sessionId,
-      isRead: false,
-      deletedBy: { $nin: loginUser },
-      flaggedBy: { $nin: loginUser },
-    };
-
-    const messageForSeen = await getMessages(query);
-
-    if (messageForSeen.length > 0) {
-      messageForSeen.map(async (e) => {
-        const message = await updateMessageById(e._id, {
-          $set: { isRead: true },
-        });
-        seenMessageIO(message);
-      });
-    }
-    let Channel = await findChat({
-      sessionId: sessionId,
-    });
-    if (Channel?.users && Channel.users.length > 0) {
-      Channel.users.map(async (e) => {
-        let resetChats = await ResetChatList(e._id);
-        resetChatIO(e._id, resetChats);
-      });
-    }
-    // delete query.sender;
-    delete query.isRead;
-
-    const page = req.query.page || 1;
-    // const limit = req.query.limit || 10
-    // let messagesData = await findMessages({
-    //     query, page, limit, populate: [
-    //         {
-    //             path: 'sender'
-    //         }
-    //     ]
-    // })
-
-    const limit = req.query.limit || 10;
- 
-    query = getMessageAggregationwithDetail(null, sessionId, loginUser);  
-
-    // messagesData = {
-    //     ...messagesData
-    // }
-    const messagesData = await findMessages({
-      query,
-      page,
-      limit,
-      populate: [
-        {
-          path: "sender",
-          //   populate: {
-          //     path: 'ssn_image profileImage',
-          //   },
-        },
-      ],
-    });
-    generateResponse(messagesData, "Messages fetched successfully", res);
-  } catch (error) {
-    console.log(error, "error>>>");
-    next(new Error(error.message));
-  }
-};
-
-// exports.votePoll = async (req, res, next) => {
+// exports.getMessages = async (req, res, next) => {
 //   try {
-//     // votePoll, getVote, deleteVote
-//     const { poll, serviceId, sessionId, messageId } = req.body;
-//     const user = req.user.id;
-//     const page = 1;
-//     const limit = 10;
-//     const findPoll = await getSinglePoll({ _id: poll });
-//     if (!findPoll) {
-//       return next({
-//         statusCode: STATUS_CODE.NOT_FOUND,
-//         message: "Poll not found",
-//       });
-//     }
-//     const getRecieverList = await findMessageById(messageId);
-//     if (!getRecieverList) {
-//       return next({
-//         statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
-//         message: "No message found for the message Id",
-//       });
-//     }
-//     let findVote = await getVote({ poll, serviceId, user });
-//     if (findVote.length !== 0) {
-//       const AlreadyVote = await deleteVote({ poll, user });
-//       query = getMessageAggregationwithDetail(messageId , sessionId, user);
-//       const messagesData = await findMessageByAggregate(query);
-//       messagesData[0].poll.State = "Updated"
-//       getRecieverList.receiver.forEach((receiver) => {
-//         if (receiver) {
-//           messagesData[0]['voter_Id'] = req?.user?.id; 
-//           sendMessageIO(receiver, messagesData[0]);
-//         }
-//       });
-//       generateResponse(AlreadyVote, "vote deleted", res);
-//       return;
-//     }
+//     console.log("api is hitting>>..getMessages")
+//     console.log("api is hitting>>..getMessages")
 
-//     await deleteVote({ poll, user });
-//     let addVote = await votePoll({
-//       poll: poll,
-//       serviceId: serviceId,
-//       user: user,
-//     });
+//     const { channelId, sessionId } = req.query;
+//     const loginUser = req.user.id;
 
-//     query = getUpdatedMessagesWithPollsAndVotes(sessionId, messageId, user);
-//     const messagesData = await findMessageByAggregate(query);
-//     messagesData[0].poll.State= "Updated"
-//     getRecieverList.receiver.forEach((receiver) => {
-//       if (receiver) {
-//         messagesData[0]['voter_Id'] = req?.user?.id;
-//         sendMessageIO(receiver, messagesData[0]);
+//     // Build query for messages in the given channel, not deleted/flagged by user
+//     let query = {
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     };
+
+//     // Mark unread messages as read and emit seen event
+//     const unreadQuery = {
+//       ...query,
+//       isRead: false,
+//     };
+//     const messageForSeen = await getMessages(unreadQuery);
+
+//     if (messageForSeen.length > 0) {
+//       for (const e of messageForSeen) {
+//         const message = await updateMessageById(e._id, {
+//           $set: { isRead: true },
+//         });
+//         seenMessageIO(message);
 //       }
+//     }
+
+//     // Reset chat list for all users in the channel
+//     let Channel = await findChat({ channel: channelId });
+//     if (Channel?.users && Channel.users.length > 0) {
+//       for (const e of Channel.users) {
+//         let resetChats = await ResetChatList(e._id || e);
+//         resetChatIO(e._id || e, resetChats);
+//       }
+//     }
+
+//     // Pagination
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const totalItems = await getMessages({
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     }).countDocuments();
+//     // Find messages with pagination
+//     const messagesData = await getMessages({
+//       sessionId: sessionId,
+//       deletedBy: { $nin: [loginUser] },
+//       flaggedBy: { $nin: [loginUser] },
+//     })
+//       .skip(skip)
+//       .limit(limit)
+//       .sort({ createdAt: -1 })
+// .populate([
+//   {
+//     path: "sender",
+//     populate: {
+//       path: "profileId",
+//     },
+//   },
+//   {
+//     path: "poll",
+//     populate: [
+//       {
+//         path: "services",
+//         populate: {
+//           path: "media", // ✅ populate media inside each service
+//         },
+//       },
+//     ],
+//   },
+// ])
+//     const result = messagesData.map(msg => {
+//       const msgObj = msg.toObject();
+//       return {
+//         ...msgObj,
+//         sender: msgObj.sender || null, // flatten sender to just ID
+//       };
 //     });
-//     generateResponse(addVote, "vote added", res);
+
+//     // Step 4: Construct pagination info
+//     const totalPages = Math.ceil(totalItems / limit);
+
+//     const pagination = {
+//       totalItems,
+//       currentPage: page,
+//       totalPages,
+//       hasPrevPage: page > 1,
+//       hasNextPage: page < totalPages,
+//       prevPage: page > 1 ? page - 1 : null,
+//       nextPage: page < totalPages ? page + 1 : null,
+//     };
+//     const resu = {
+//       result,
+//       pagination,
+//     }
+//     generateResponse(resu, "Messages fetched successfully", res);
 //   } catch (error) {
+//     console.log(error, "error>>>");
 //     next(new Error(error.message));
 //   }
 // };
 
+exports.votePoll = async (req, res, next) => {
+  try {
+    // votePoll, getVote, deleteVote
+    const { poll, serviceId, sessionId, messageId } = req.body;
+    const user = req.user.id;
+    const page = 1;
+    const limit = 10;
+    const findPoll = await getSinglePoll({ _id: poll });
+    if (!findPoll) {
+      return next({
+        statusCode: STATUS_CODE.NOT_FOUND,
+        message: "Poll not found",
+      });
+    }
+    const getRecieverList = await findMessageById(messageId);
+    if (!getRecieverList) {
+      return next({
+        statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
+        message: "No message found for the message Id",
+      });
+    }
+    let findVote = await getVote({ poll, serviceId, user });
+    if (findVote.length !== 0) {
+      const AlreadyVote = await deleteVote({ poll, user });
+      query = getMessageAggregationwithDetail(messageId , sessionId, user);
+      const messagesData = await findMessageByAggregate(query);
+      messagesData[0].poll.State = "Updated"
+      getRecieverList.receiver.forEach((receiver) => {
+        if (receiver) {
+          messagesData[0]['voter_Id'] = req?.user?.id; 
+          sendMessageIO(receiver, messagesData[0]);
+        }
+      });
+      generateResponse(AlreadyVote, "vote deleted", res);
+      return;
+    }
+
+    await deleteVote({ poll, user });
+    let addVote = await votePoll({
+      poll: poll,
+      serviceId: serviceId,
+      user: user,
+    });
+
+    query = getUpdatedMessagesWithPollsAndVotes(sessionId, messageId, user);
+    const messagesData = await findMessageByAggregate(query);
+    messagesData[0].poll.State= "Updated"
+    getRecieverList.receiver.forEach((receiver) => {
+      if (receiver) {
+        messagesData[0]['voter_Id'] = req?.user?.id;
+        sendMessageIO(receiver, messagesData[0]);
+      }
+    });
+    generateResponse(addVote, "vote added", res);
+  } catch (error) {
+    next(new Error(error.message));
+  }
+};
+exports.getMessages = async (req, res, next) => {
+    try {
+        const { user, sessionId } = req.query
+        const loginUser = req.user.id
+
+
+        console.log("loginUser>>>>>", loginUser);
+
+        let query = {
+            sessionId: sessionId,
+            isRead: false,
+            deletedBy: { $nin: loginUser },
+            flaggedBy: { $nin: loginUser }
+
+        }
+        const messageForSeen = await getMessages(query)
+
+
+
+        if (messageForSeen.length > 0) {
+            messageForSeen.map(async (e) => {
+                const message = await updateMessageById(e._id, { $set: { isRead: true } })
+                seenMessageIO(message)
+            })
+
+
+        }
+        // let Channel = await findChat({
+        //     session: sessionId
+        // });
+        // if (Channel.users.length > 0) {
+        //     Channel.users.map(async (e) => {
+        //         let resetChats = await ResetChatList(e._id)
+        //         resetChatIO(e._id, resetChats)
+
+        //     })
+
+
+        // }
+        delete query.sender;
+        delete query.isRead;
+
+        const page = req.query.page || 1
+        // const limit = req.query.limit || 10
+        // let messagesData = await findMessages({
+        //     query, page, limit, populate: [
+        //         {
+        //             path: 'sender'
+        //         }
+        //     ]
+        // })
+  
+        const limit = req.query.limit || 10;
+   
+         query = getMessagesWithPolls(sessionId,loginUser )
+     
+        // messagesData = {
+        //     ...messagesData
+        // }
+        const messagesData = await findMessages({
+            query, page, limit, populate: [
+                {
+                    path: 'sender',
+                    //   populate: {
+                    //     path: 'ssn_image profileImage',
+                    //   },
+                },
+            ]
+        });
+        generateResponse(messagesData, "Messages fetched successfully", res);
+
+    }
+    catch (error) {
+        next(new Error(error.message));
+    }
+}
 exports.deleteMessage = async (req, res, next) => {
   try {
     const user = req.user.id;
@@ -548,13 +661,13 @@ exports.getPollDetails = async (req, res, next) => {
       });
     }
 
-    const query = getMessageAggregationwithDetail(messageId ,sessionId, user)
+    const query = getMessageAggregationwithDetail(messageId, sessionId, user)
     const messagesData = await findMessageByAggregate(query);
-    if(!messagesData){
-        return next({
-            statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
-            message: "Error fetching details.",
-          });
+    if (!messagesData) {
+      return next({
+        statusCode: STATUS_CODE.INTERNAL_SERVER_ERROR,
+        message: "Error fetching details.",
+      });
     }
     generateResponse(messagesData[0], "Poll details fetched", res);
 
@@ -575,9 +688,9 @@ exports.updatePollStatus = async (req, res, next) => {
         message: "Poll not found",
       });
     }
-    const updatedPoll = await updatePollStatusByID(pollId, {pollingStatus: "Completed"})
+    const updatedPoll = await updatePollStatusByID(pollId, { pollingStatus: "Completed" })
 
-    const query = getMessageAggregationwithDetail(messageId ,sessionId, user)
+    const query = getMessageAggregationwithDetail(messageId, sessionId, user)
     const messagesData = await findMessageByAggregate(query);
     const getRecieverList = await findMessageById(messageId);
     if (!getRecieverList) {
@@ -589,7 +702,7 @@ exports.updatePollStatus = async (req, res, next) => {
     messagesData[0].poll.State = "Updated"
     getRecieverList.receiver.forEach((receiver) => {
       if (receiver) {
-        sendMessageForSpecificSessionIO(receiver, session = sessionId,messagesData[0]);
+        sendMessageForSpecificSessionIO(receiver, session = sessionId, messagesData[0]);
       }
     });
 
