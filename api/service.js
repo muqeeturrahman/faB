@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { createService, updateService, getUserServices , filerServices, getAllTheVerifiedService, deleteService, getServiceForHomeScreen, fetchServices,getService,serviceAnalytics,favoriteServiceToggle,favoriteServicesList, getServiceForBooking} = require('../controller/service');
+const { createService, updateService, getUserServices , filerServices, getAllTheVerifiedService, deleteService, getServiceForHomeScreen, fetchServices,getService,serviceAnalytics,favoriteServiceToggle,favoriteServicesList, getServiceForBooking, findServicesAll} = require('../controller/service');
 const {createBooking,getBookings,cancelBooking}=require("../controller/booking")
 const {createBookingReview,getReviews}=require("../controller/Review")
 const AuthMiddleWare = require('../middlewares/AuthMiddleWare');
@@ -34,6 +34,8 @@ class ServiceAPI {
           ]), asyncHandler(updateService));
 
           router.get('/get-service', AuthMiddleWare(Object.values(ROLES)), asyncHandler(getUserServices));
+          router.get('/findServicesAll',  asyncHandler(findServicesAll));
+
           router.post('/delete-service', AuthMiddleWare(Object.values(ROLES)), asyncHandler(deleteService) )
           router.post('/search', AuthMiddleWare(Object.values(ROLES)), asyncHandler(fetchServices));
           router.post('/get-services-by-status', AuthMiddleWare((ROLES)), asyncHandler(getServiceForHomeScreen));

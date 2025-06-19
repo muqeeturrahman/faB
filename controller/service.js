@@ -407,7 +407,17 @@ exports.deleteService = async (req, res, next) => {
     next(new Error(error.message));
   }
 };
-
+exports.findServicesAll = async (req, res, next) => {
+  try {
+   
+    let data = await findServices({});
+ 
+    generateResponse(data, "Services Fetched Successfully", res);
+  
+  } catch (error) {
+    next(new Error(error.message));
+  }
+};
 exports.getServiceForHomeScreen = async (req, res, next) => {
   try {
     const { status } = req.body;
